@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { LLMProvider, Message } from '../lib/llm';
 import { RAG } from '../lib/rag-system';
 import { Document } from '../lib/rag';

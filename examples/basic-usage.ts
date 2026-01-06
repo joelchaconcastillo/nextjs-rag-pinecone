@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { RAG } from '../lib/rag-system';
 import { Document } from '../lib/rag';
 
@@ -66,7 +67,7 @@ async function basicExample() {
   ];
 
   // Add documents to the RAG system
-  console.log('Adding documents...');
+  //console.log('Adding documents...');
   await rag.addDocuments(documents);
 
   console.log('Documents indexed successfully!');

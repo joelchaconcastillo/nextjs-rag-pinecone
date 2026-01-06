@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { DataProcessor, PineconeService, Assistant } from '../lib/rag';
 import { GeminiProvider } from '../lib/llm';
 import { Document } from '../lib/rag';

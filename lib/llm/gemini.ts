@@ -9,7 +9,7 @@ export class GeminiProvider implements LLMProvider {
   private modelName: string;
   private conversationHistory: Map<string, Message[]>;
 
-  constructor(apiKey: string, modelName: string = 'gemini-2.0-flash-exp') {
+  constructor(apiKey: string, modelName: string = 'gemini-2.5-flash') {
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.modelName = modelName;
     this.conversationHistory = new Map();
