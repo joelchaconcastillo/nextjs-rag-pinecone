@@ -77,6 +77,7 @@ export class DataProcessor {
 
       // Extract chunk
       let chunk = content.substring(startIndex, endIndex);
+      let actualChunkLength = chunk.length;
 
       // Try to break at sentence or word boundary if not at the end
       if (endIndex < content.length) {
@@ -88,13 +89,20 @@ export class DataProcessor {
         if (breakPoint > this.chunkSize / 2) {
           // Break at sentence boundary
           chunk = chunk.substring(0, breakPoint + 1);
+          actualChunkLength = chunk.length;
         } else {
           // Try to break at word boundary
           const lastSpace = chunk.lastIndexOf(' ');
           if (lastSpace > this.chunkSize / 2) {
             chunk = chunk.substring(0, lastSpace);
+            actualChunkLength = chunk.length;
           }
         }
+      }
+
+      // Skip very small chunks (less than 10% of chunk size)
+      if (chunk.trim().length < this.chunkSize * 0.1 && chunks.length > 0) {
+        break;
       }
 
       // Create chunked document
@@ -112,7 +120,9 @@ export class DataProcessor {
       });
 
       // Move to next chunk with overlap
-      startIndex += chunk.length - this.chunkOverlap;
+      // Ensure we always move forward to avoid infinite loop
+      const moveForward = Math.max(1, actualChunkLength - this.chunkOverlap);
+      startIndex += moveForward;
       chunkIndex++;
     }
 
