@@ -11,15 +11,14 @@ export default function Home() {
           </p>
           <ul className="list-disc list-inside space-y-2 mb-6">
             <li>Next.js for the web framework</li>
-            <li>Pinecone for vector storage</li>
-            <li>Gemini AI for embeddings and LLM responses</li>
+            <li>Pinecone for embeddings and vector storage</li>
+            <li>Gemini AI for LLM responses</li>
             <li>TypeScript for type safety</li>
           </ul>
           <h2 className="text-2xl font-semibold mb-4">Features:</h2>
           <ul className="list-disc list-inside space-y-2">
             <li>DataProcessor class for document processing and chunking</li>
-            <li>Embedder class for generating embeddings</li>
-            <li>Indexer class for storing vectors in Pinecone</li>
+            <li>PineconeService class for embeddings and vector storage</li>
             <li>Assistant class for querying and generating responses</li>
             <li>LLM abstraction layer (default: Gemini AI)</li>
             <li>Conversation memory stored by ID</li>

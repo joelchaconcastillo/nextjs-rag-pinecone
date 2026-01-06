@@ -1,6 +1,5 @@
 import { DataProcessor, Document, ChunkedDocument } from './rag/data-processor';
-import { Embedder } from './rag/embedder';
-import { Indexer } from './rag/indexer';
+import { PineconeService } from './rag/pinecone-service';
 import { Assistant, AssistantResponse } from './rag/assistant';
 import { GeminiProvider } from './llm/gemini';
 import { LLMProvider } from './llm/provider';
@@ -17,6 +16,7 @@ export interface RAGConfig {
   chunkOverlap?: number;
   topK?: number;
   llmProvider?: LLMProvider;
+  embeddingModel?: string;
 }
 
 /**
@@ -24,8 +24,7 @@ export interface RAGConfig {
  */
 export class RAG {
   private dataProcessor: DataProcessor;
-  private embedder: Embedder;
-  private indexer: Indexer;
+  private pineconeService: PineconeService;
   private assistant: Assistant;
   private config: RAGConfig;
 
@@ -38,24 +37,20 @@ export class RAG {
       config.chunkOverlap || 200
     );
 
-    this.embedder = new Embedder(config.geminiApiKey);
-
-    this.indexer = new Indexer(
+    // Use PineconeService for both embedding and indexing
+    this.pineconeService = new PineconeService(
       config.pineconeApiKey,
       config.pineconeIndexName,
-      this.embedder,
-      config.namespace
+      config.namespace,
+      config.embeddingModel
     );
 
     const llmProvider =
       config.llmProvider || new GeminiProvider(config.geminiApiKey);
 
     this.assistant = new Assistant(
-      config.pineconeApiKey,
-      config.pineconeIndexName,
-      this.embedder,
+      this.pineconeService,
       llmProvider,
-      config.namespace,
       config.topK || 5
     );
   }
@@ -64,8 +59,8 @@ export class RAG {
    * Initialize the RAG system (creates index if needed)
    */
   async initialize(): Promise<void> {
-    const dimension = await this.embedder.getDimension();
-    await this.indexer.initializeIndex(dimension);
+    const dimension = await this.pineconeService.getDimension();
+    await this.pineconeService.initializeIndex(dimension);
   }
 
   /**
@@ -75,8 +70,8 @@ export class RAG {
     // Process and chunk documents
     const chunks = this.dataProcessor.processAndChunk(documents);
 
-    // Index the chunks
-    await this.indexer.indexDocuments(chunks);
+    // Index the chunks using PineconeService
+    await this.pineconeService.indexDocuments(chunks);
   }
 
   /**
@@ -104,7 +99,7 @@ export class RAG {
    * Index pre-processed chunks
    */
   async indexChunks(chunks: ChunkedDocument[]): Promise<void> {
-    await this.indexer.indexDocuments(chunks);
+    await this.pineconeService.indexDocuments(chunks);
   }
 
   /**
@@ -128,21 +123,21 @@ export class RAG {
    * Delete documents by IDs
    */
   async deleteDocuments(ids: string[]): Promise<void> {
-    await this.indexer.deleteDocuments(ids);
+    await this.pineconeService.deleteDocuments(ids);
   }
 
   /**
    * Delete all documents
    */
   async deleteAll(): Promise<void> {
-    await this.indexer.deleteAll();
+    await this.pineconeService.deleteAll();
   }
 
   /**
    * Get index statistics
    */
   async getStats() {
-    return await this.indexer.getStats();
+    return await this.pineconeService.getStats();
   }
 
   /**
@@ -167,17 +162,10 @@ export class RAG {
   }
 
   /**
-   * Get the embedder instance
+   * Get the PineconeService instance
    */
-  getEmbedder(): Embedder {
-    return this.embedder;
-  }
-
-  /**
-   * Get the indexer instance
-   */
-  getIndexer(): Indexer {
-    return this.indexer;
+  getPineconeService(): PineconeService {
+    return this.pineconeService;
   }
 
   /**

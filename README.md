@@ -1,14 +1,14 @@
 # Next.js RAG with Pinecone
 
-A comprehensive Retrieval-Augmented Generation (RAG) system built with Next.js, Pinecone, and Gemini AI. This project demonstrates a modular, class-based architecture for building production-ready RAG applications.
+A comprehensive Retrieval-Augmented Generation (RAG) system built with Next.js and Pinecone. This project demonstrates a modular, class-based architecture for building production-ready RAG applications.
 
 ## Features
 
-- **Modular Architecture**: Separate classes for data processing, embedding, indexing, and querying
+- **Modular Architecture**: Separate classes for data processing, embedding/indexing, and querying
+- **Unified Pinecone Service**: Combined embedding and indexing using Pinecone's Inference API
 - **LLM Abstraction Layer**: Use any LLM provider (Gemini AI by default)
 - **Conversation Memory**: Maintain conversation history by user ID
 - **Document Processing**: Automatic text chunking with overlap for better context
-- **Vector Storage**: Efficient storage and retrieval using Pinecone
 - **TypeScript**: Full type safety throughout the codebase
 
 ## Architecture
@@ -22,36 +22,33 @@ The system is organized into the following main components:
    - Chunks documents into smaller pieces with configurable size and overlap
    - Preserves metadata throughout processing
 
-2. **Embedder** (`lib/rag/embedder.ts`)
-   - Generates embeddings using Gemini AI's embedding model
-   - Supports batch processing for efficiency
-   - Handles rate limiting automatically
-
-3. **Indexer** (`lib/rag/indexer.ts`)
+2. **PineconeService** (`lib/rag/pinecone-service.ts`)
+   - Unified service for both embeddings and vector storage
+   - Generates embeddings using Pinecone's Inference API
    - Manages Pinecone index creation and configuration
    - Stores document embeddings with metadata
-   - Supports batch upserts for performance
+   - Supports batch processing for efficiency
 
-4. **Assistant** (`lib/rag/assistant.ts`)
+3. **Assistant** (`lib/rag/assistant.ts`)
    - Queries the vector database for relevant documents
    - Generates AI responses using context from retrieved documents
    - Maintains conversation history by ID
 
 ### LLM Layer
 
-5. **LLM Provider Interface** (`lib/llm/provider.ts`)
+4. **LLM Provider Interface** (`lib/llm/provider.ts`)
    - Abstract interface for LLM providers
    - Supports conversation history management
    - Easy to implement custom providers
 
-6. **Gemini Provider** (`lib/llm/gemini.ts`)
+5. **Gemini Provider** (`lib/llm/gemini.ts`)
    - Default implementation using Google's Gemini AI
    - Manages conversation memory by ID
    - Supports both simple and history-aware generation
 
 ### Main RAG System
 
-7. **RAG** (`lib/rag-system.ts`)
+6. **RAG** (`lib/rag-system.ts`)
    - Orchestrates all components
    - Provides high-level API for common operations
    - Simplifies initialization and usage
@@ -68,7 +65,7 @@ cp .env.example .env
 # Edit .env with your API keys
 # PINECONE_API_KEY=your_pinecone_api_key
 # PINECONE_INDEX_NAME=your_index_name
-# GEMINI_API_KEY=your_gemini_api_key
+# GEMINI_API_KEY=your_gemini_api_key (only needed for LLM responses)
 ```
 
 ## Usage
@@ -123,22 +120,21 @@ rag.clearHistory(conversationId);
 ### Advanced Usage with Individual Classes
 
 ```typescript
-import { DataProcessor, Embedder, Indexer, Assistant } from './lib/rag';
+import { DataProcessor, PineconeService, Assistant } from './lib/rag';
 import { GeminiProvider } from './lib/llm';
 
 // Initialize components separately
 const dataProcessor = new DataProcessor(1000, 200);
-const embedder = new Embedder(geminiApiKey);
-const indexer = new Indexer(pineconeApiKey, indexName, embedder);
+const pineconeService = new PineconeService(pineconeApiKey, indexName);
 const llmProvider = new GeminiProvider(geminiApiKey);
-const assistant = new Assistant(pineconeApiKey, indexName, embedder, llmProvider);
+const assistant = new Assistant(pineconeService, llmProvider);
 
 // Process documents
 const processed = dataProcessor.processDocuments(documents);
 const chunks = dataProcessor.chunkDocuments(processed);
 
-// Index chunks
-await indexer.indexDocuments(chunks);
+// Index chunks (PineconeService handles both embedding and indexing)
+await pineconeService.indexDocuments(chunks);
 
 // Query
 const response = await assistant.ask('Your question here');
@@ -172,9 +168,9 @@ class CustomProvider implements LLMProvider {
 
 // Use custom provider
 const rag = new RAG({
-  pineconeApiKey: process.env.PINECONE_API_KEY!,
+  pineconeApiKey: process.env.PINECONE_API_KEY!, // Used for embeddings and indexing
   pineconeIndexName: process.env.PINECONE_INDEX_NAME!,
-  geminiApiKey: process.env.GEMINI_API_KEY!, // Still needed for embeddings
+  geminiApiKey: process.env.GEMINI_API_KEY!, // Only for LLM responses
   llmProvider: new CustomProvider(), // Your custom LLM
 });
 ```
@@ -238,17 +234,15 @@ npm run lint
 - `chunkDocuments(documents)` - Chunk multiple documents
 - `processAndChunk(documents)` - Process and chunk in one step
 
-### Embedder Class
+### PineconeService Class
 
-- `embedText(text)` - Generate embedding for text
+- `embedText(text)` - Generate embedding for text using Pinecone Inference API
 - `embedTexts(texts)` - Generate embeddings for multiple texts
 - `getDimension()` - Get embedding dimension
-
-### Indexer Class
-
 - `initializeIndex(dimension)` - Initialize Pinecone index
-- `indexDocument(document)` - Index a single document
-- `indexDocuments(documents)` - Index multiple documents
+- `indexDocument(document)` - Embed and index a single document
+- `indexDocuments(documents)` - Embed and index multiple documents
+- `query(queryText, topK?)` - Query for similar vectors
 - `deleteDocuments(ids)` - Delete documents by IDs
 - `deleteAll()` - Delete all documents
 - `getStats()` - Get index statistics

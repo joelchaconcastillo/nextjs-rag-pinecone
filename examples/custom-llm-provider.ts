@@ -87,9 +87,9 @@ async function customProviderExample() {
 
   // Initialize RAG with custom provider
   const rag = new RAG({
-    pineconeApiKey: process.env.PINECONE_API_KEY!,
+    pineconeApiKey: process.env.PINECONE_API_KEY!, // Used for both embeddings and indexing
     pineconeIndexName: process.env.PINECONE_INDEX_NAME!,
-    geminiApiKey: process.env.GEMINI_API_KEY!, // Still needed for embeddings
+    geminiApiKey: process.env.GEMINI_API_KEY!, // Only needed for LLM if not using custom provider
     llmProvider: customProvider, // Use custom provider for text generation
     namespace: 'custom-provider',
   });

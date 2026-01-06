@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project implements a complete Retrieval-Augmented Generation (RAG) system with a modular, class-based architecture built on Next.js, Pinecone, and Gemini AI.
+This project implements a complete Retrieval-Augmented Generation (RAG) system with a modular, class-based architecture built on Next.js and Pinecone.
 
 ## What Was Implemented
 
@@ -15,22 +15,20 @@ This project implements a complete Retrieval-Augmented Generation (RAG) system w
 - Prevents infinite loops and tiny chunks
 - Preserves metadata throughout processing
 
-#### Embedder (`lib/rag/embedder.ts`)
-- Generates embeddings using Gemini AI's `text-embedding-004` model
-- Batch processing support for efficiency
-- Returns 768-dimensional embeddings
-- Handles rate limiting automatically
-
-#### Indexer (`lib/rag/indexer.ts`)
+#### PineconeService (`lib/rag/pinecone-service.ts`)
+- **Unified service combining embedding and indexing functionality**
+- Generates embeddings using Pinecone's Inference API
+- Uses `multilingual-e5-large` model by default
 - Creates and manages Pinecone indexes
 - Automatic index initialization with correct dimensions
-- Batch upsert operations for performance
+- Batch processing for both embedding and indexing
 - Support for namespaces
 - Delete operations (by ID or all)
 - Index statistics retrieval
+- Query functionality for vector search
 
 #### Assistant (`lib/rag/assistant.ts`)
-- Queries Pinecone for relevant documents
+- Queries Pinecone for relevant documents via PineconeService
 - Generates AI responses using retrieved context
 - Maintains conversation history by user ID
 - Configurable number of results (topK)

@@ -1,4 +1,4 @@
-import { DataProcessor, Embedder, Indexer, Assistant } from '../lib/rag';
+import { DataProcessor, PineconeService, Assistant } from '../lib/rag';
 import { GeminiProvider } from '../lib/llm';
 import { Document } from '../lib/rag';
 
@@ -12,20 +12,18 @@ async function advancedExample() {
   console.log('Step 1: Initializing components...');
 
   const dataProcessor = new DataProcessor(500, 100);
-  const embedder = new Embedder(process.env.GEMINI_API_KEY!);
-  const indexer = new Indexer(
+  
+  // PineconeService handles both embedding and indexing
+  const pineconeService = new PineconeService(
     process.env.PINECONE_API_KEY!,
     process.env.PINECONE_INDEX_NAME!,
-    embedder,
     'advanced-example'
   );
+  
   const llmProvider = new GeminiProvider(process.env.GEMINI_API_KEY!);
   const assistant = new Assistant(
-    process.env.PINECONE_API_KEY!,
-    process.env.PINECONE_INDEX_NAME!,
-    embedder,
+    pineconeService,
     llmProvider,
-    'advanced-example',
     3
   );
 
@@ -80,14 +78,14 @@ async function advancedExample() {
   // Step 4: Initialize index
   console.log('\nStep 4: Initializing Pinecone index...');
 
-  const dimension = await embedder.getDimension();
+  const dimension = await pineconeService.getDimension();
   console.log(`Embedding dimension: ${dimension}`);
-  await indexer.initializeIndex(dimension);
+  await pineconeService.initializeIndex(dimension);
 
-  // Step 5: Index chunks
+  // Step 5: Index chunks (PineconeService handles both embedding and indexing)
   console.log('\nStep 5: Indexing chunks...');
 
-  await indexer.indexDocuments(chunks);
+  await pineconeService.indexDocuments(chunks);
   console.log('Chunks indexed successfully');
 
   // Step 6: Query using Assistant
@@ -134,7 +132,7 @@ async function advancedExample() {
   // Step 9: Get index stats
   console.log('\nStep 9: Index statistics...');
 
-  const stats = await indexer.getStats();
+  const stats = await pineconeService.getStats();
   console.log('Index stats:', JSON.stringify(stats, null, 2));
 
   // Step 10: Cleanup

@@ -92,26 +92,23 @@ rag.clearHistory(userId);
 For more control, use the classes individually:
 
 ```typescript
-import { DataProcessor, Embedder, Indexer, Assistant } from './lib/rag';
+import { DataProcessor, PineconeService, Assistant } from './lib/rag';
 import { GeminiProvider } from './lib/llm';
 
 // Step 1: Process documents
 const processor = new DataProcessor(1000, 200);
 const chunks = processor.processAndChunk(documents);
 
-// Step 2: Create embedder
-const embedder = new Embedder(geminiApiKey);
+// Step 2: Create PineconeService (handles both embedding and indexing)
+const pineconeService = new PineconeService(pineconeApiKey, indexName);
+await pineconeService.initializeIndex(1024); // Pinecone embedding dimension
+await pineconeService.indexDocuments(chunks);
 
-// Step 3: Index documents
-const indexer = new Indexer(pineconeApiKey, indexName, embedder);
-await indexer.initializeIndex(768); // Gemini embedding dimension
-await indexer.indexDocuments(chunks);
-
-// Step 4: Create assistant
+// Step 3: Create assistant
 const llm = new GeminiProvider(geminiApiKey);
-const assistant = new Assistant(pineconeApiKey, indexName, embedder, llm);
+const assistant = new Assistant(pineconeService, llm);
 
-// Step 5: Query
+// Step 4: Query
 const response = await assistant.ask('Your question here');
 ```
 
@@ -154,12 +151,13 @@ const rag = new RAG({
 const rag = new RAG({
   pineconeApiKey: string,          // Required: Pinecone API key
   pineconeIndexName: string,       // Required: Index name
-  geminiApiKey: string,            // Required: Gemini API key
+  geminiApiKey: string,            // Required: Gemini API key (only for LLM)
   namespace?: string,              // Optional: Pinecone namespace
   chunkSize?: number,              // Optional: Default 1000
   chunkOverlap?: number,           // Optional: Default 200
   topK?: number,                   // Optional: Number of results, default 5
   llmProvider?: LLMProvider,       // Optional: Custom LLM provider
+  embeddingModel?: string,         // Optional: Pinecone embedding model, default 'multilingual-e5-large'
 });
 ```
 
@@ -172,12 +170,14 @@ const processor = new DataProcessor(
 );
 ```
 
-### Embedder Configuration
+### PineconeService Configuration
 
 ```typescript
-const embedder = new Embedder(
-  apiKey,         // Gemini API key
-  modelName       // Optional: Default 'text-embedding-004'
+const pineconeService = new PineconeService(
+  apiKey,         // Pinecone API key
+  indexName,      // Index name
+  namespace,      // Optional: namespace
+  embeddingModel  // Optional: Model name, default 'multilingual-e5-large'
 );
 ```
 

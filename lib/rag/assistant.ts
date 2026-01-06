@@ -1,5 +1,4 @@
-import { Pinecone } from '@pinecone-database/pinecone';
-import { Embedder } from './embedder';
+import { PineconeService } from './pinecone-service';
 import { LLMProvider, Message } from '../llm';
 
 /**
@@ -25,26 +24,17 @@ export interface AssistantResponse {
  * Assistant class for querying and generating responses
  */
 export class Assistant {
-  private pinecone: Pinecone;
-  private indexName: string;
-  private embedder: Embedder;
+  private pineconeService: PineconeService;
   private llmProvider: LLMProvider;
-  private namespace?: string;
   private topK: number;
 
   constructor(
-    pineconeApiKey: string,
-    indexName: string,
-    embedder: Embedder,
+    pineconeService: PineconeService,
     llmProvider: LLMProvider,
-    namespace?: string,
     topK: number = 5
   ) {
-    this.pinecone = new Pinecone({ apiKey: pineconeApiKey });
-    this.indexName = indexName;
-    this.embedder = embedder;
+    this.pineconeService = pineconeService;
     this.llmProvider = llmProvider;
-    this.namespace = namespace;
     this.topK = topK;
   }
 
@@ -52,26 +42,19 @@ export class Assistant {
    * Query the vector database
    */
   async query(queryText: string, topK?: number): Promise<QueryResult[]> {
-    // Generate embedding for query
-    const queryEmbedding = await this.embedder.embedText(queryText);
-
-    // Query Pinecone
-    const index = this.pinecone.index(this.indexName);
-    const queryResponse = await index.namespace(this.namespace || '').query({
-      vector: queryEmbedding.values,
-      topK: topK || this.topK,
-      includeMetadata: true,
-    });
+    // Query using PineconeService (which handles embedding internally)
+    const matches = await this.pineconeService.query(
+      queryText,
+      topK || this.topK
+    );
 
     // Format results
-    const results: QueryResult[] = (queryResponse.matches || []).map(
-      (match) => ({
-        id: match.id,
-        score: match.score || 0,
-        content: (match.metadata?.content as string) || '',
-        metadata: match.metadata || {},
-      })
-    );
+    const results: QueryResult[] = matches.map((match) => ({
+      id: match.id,
+      score: match.score || 0,
+      content: (match.metadata?.content as string) || '',
+      metadata: match.metadata || {},
+    }));
 
     return results;
   }
