@@ -101,7 +101,8 @@ const chunks = processor.processAndChunk(documents);
 
 // Step 2: Create PineconeService (handles both embedding and indexing)
 const pineconeService = new PineconeService(pineconeApiKey, indexName);
-await pineconeService.initializeIndex(1024); // Pinecone embedding dimension
+const dimension = await pineconeService.getDimension();
+await pineconeService.initializeIndex(dimension);
 await pineconeService.indexDocuments(chunks);
 
 // Step 3: Create assistant

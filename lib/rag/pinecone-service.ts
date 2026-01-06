@@ -1,4 +1,4 @@
-import { Pinecone, RecordMetadata } from '@pinecone-database/pinecone';
+import { Pinecone, RecordMetadata, IndexStatsDescription } from '@pinecone-database/pinecone';
 import { ChunkedDocument } from './data-processor';
 
 /**
@@ -27,6 +27,7 @@ export class PineconeService {
   private indexName: string;
   private namespace?: string;
   private embeddingModel: string;
+  private cachedDimension?: number;
 
   constructor(
     apiKey: string,
@@ -38,6 +39,17 @@ export class PineconeService {
     this.indexName = indexName;
     this.namespace = namespace;
     this.embeddingModel = embeddingModel;
+  }
+
+  /**
+   * Extract embedding values from Pinecone embedding data
+   */
+  private extractEmbeddingValues(embeddingData: any): number[] {
+    const values = 'values' in embeddingData ? embeddingData.values : [];
+    if (!values || values.length === 0) {
+      throw new Error('No embedding values returned from Pinecone');
+    }
+    return values;
   }
 
   /**
@@ -56,11 +68,7 @@ export class PineconeService {
       throw new Error('No embedding data returned from Pinecone');
     }
 
-    // Check if this is a dense embedding (which has values)
-    const values = 'values' in embeddingData ? embeddingData.values : [];
-    if (!values || values.length === 0) {
-      throw new Error('No embedding values returned from Pinecone');
-    }
+    const values = this.extractEmbeddingValues(embeddingData);
 
     return {
       values,
@@ -90,10 +98,10 @@ export class PineconeService {
       }
 
       const batchEmbeddings = result.data.map((emb) => {
-        const values = 'values' in emb ? emb.values : [];
+        const values = this.extractEmbeddingValues(emb);
         return {
-          values: values || [],
-          dimension: values?.length || 0,
+          values,
+          dimension: values.length,
         };
       });
 
@@ -105,11 +113,17 @@ export class PineconeService {
 
   /**
    * Get the dimension of embeddings produced by this model
+   * Cached after first call to avoid unnecessary API requests
    */
   async getDimension(): Promise<number> {
+    if (this.cachedDimension) {
+      return this.cachedDimension;
+    }
+
     // Generate a test embedding to get dimension
     const testEmbedding = await this.embedText('test');
-    return testEmbedding.dimension;
+    this.cachedDimension = testEmbedding.dimension;
+    return this.cachedDimension;
   }
 
   /**
@@ -266,7 +280,7 @@ export class PineconeService {
   /**
    * Get index statistics
    */
-  async getStats(): Promise<any> {
+  async getStats(): Promise<IndexStatsDescription> {
     const index = this.pinecone.index(this.indexName);
     return await index.describeIndexStats();
   }
